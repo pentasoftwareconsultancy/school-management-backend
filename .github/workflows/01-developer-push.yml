@@ -1,0 +1,87 @@
+name: 01 - Developer Push
+
+on:
+  push:
+    branches:
+      - 'dev-*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Check if PR already exists
+      - name: Check for existing PR
+        id: check_pr
+        run: |
+          PR_EXISTS=$(gh pr list --head ${{ github.ref_name }} --base development --json number --jq '.[0].number')
+          if [ -z "$PR_EXISTS" ]; then
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR_EXISTS" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 5: Create Pull Request
+      - name: Create Pull Request
+        if: steps.check_pr.outputs.pr_exists == 'false'
+        run: |
+          gh pr create \
+            --base development \
+            --head ${{ github.ref_name }} \
+            --title "Backend: ${{ github.ref_name }} → development" \
+            --body "## 🔔 Backend PR — Awaiting Team Leader Review
+
+          **Branch:** \`${{ github.ref_name }}\`
+          **Target:** \`development\`
+          **Triggered by:** ${{ github.actor }}
+          **Commit:** ${{ github.sha }}
+
+          ---
+
+          ### ✅ Team Leader Checklist
+          1. Review the code changes in this PR
+          2. Merge this PR into \`development\`
+          3. Go to **Actions** tab → **02 - Deploy to Development**
+          4. Click **Run workflow** → Type \`DEPLOY\` → Click **Run**
+
+          > Everything after step 4 is fully automated."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 6: Comment on existing PR
+      - name: Update existing PR
+        if: steps.check_pr.outputs.pr_exists == 'true'
+        run: |
+          gh pr comment ${{ steps.check_pr.outputs.pr_number }} \
+            --body "🔄 New commit pushed by **${{ github.actor }}** — PR updated."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 7: Summary
+      - name: Summary
+        run: |
+          echo "✅ PR ready for Team Leader review"
+          echo "Branch: ${{ github.ref_name }} → development"

@@ -1,0 +1,42 @@
+name: 04 - Deploy to Testing
+
+on:
+  workflow_run:
+    workflows: ["03 - Auto Promote to Testing"]
+    types:
+      - completed
+
+jobs:
+  deploy-testing:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout testing branch
+      - name: Checkout testing branch
+        uses: actions/checkout@v4
+        with:
+          ref: testing
+          fetch-depth: 0
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Deploy to Render (Testing)
+      - name: Deploy to Render Testing
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_TEST }}"
+          echo "✅ Deployment triggered on Render (Testing)"
+
+      # Step 5: Summary
+      - name: Summary
+        run: |
+          echo "✅ Testing deployment triggered"
+          echo "🚀 Workflow 05 will now run automatically"
