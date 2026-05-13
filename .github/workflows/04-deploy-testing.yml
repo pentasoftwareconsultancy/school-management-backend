@@ -29,11 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Deploy to Render (Testing)
-      - name: Deploy to Render Testing
+      # Step 4: [TEST MODE] Mock Deploy to Render (Testing)
+      - name: Deploy to Render Testing (TEST MODE)
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_TEST }}"
-          echo "✅ Deployment triggered on Render (Testing)"
+          echo "🧪 TEST MODE: Skipping real Render deploy"
+          echo "✅ Mock deployment to Testing — PASSED"
 
       # Step 5: Summary
       - name: Summary
