@@ -1,59 +1,44 @@
 name: 07 - Auto Deploy to Production
 
 on:
-  workflow_run:
-    workflows: ["06 - Deploy to Staging"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   deploy-production:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Skip if this push was made by the bot (avoid re-triggering)
+    if: ${{ github.actor != 'github-actions[bot]' || contains(github.event.head_commit.message, 'Auto-promote') }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout staging branch
-      - name: Checkout staging branch
+      # Step 1: Checkout main branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: main
           fetch-depth: 0
 
-      # Step 2: Configure Git
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      # Step 3: Merge staging → main
-      - name: Merge staging into main
-        run: |
-          git fetch origin
-          git checkout main
-          git pull origin main
-          git merge origin/staging --no-ff -m "Auto-promote: staging → main (production) [skip ci]"
-          git push origin main
-
-      # Step 4: Setup Node.js
+      # Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # Step 5: Install dependencies
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # Step 6: [TEST MODE] Mock Deploy to Render (Production)
+      # Step 4: [TEST MODE] Mock Deploy to Render (Production)
       - name: Deploy to Render Production (TEST MODE)
         run: |
           echo "🧪 TEST MODE: Skipping real Render deploy"
           echo "✅ Mock deployment to Production — PASSED"
 
-      # Step 7: Final summary
+      # Step 5: Final summary
       - name: Final summary
         run: |
           echo "🎉 Production deployment complete!"
