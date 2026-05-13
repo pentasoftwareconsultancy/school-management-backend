@@ -1,0 +1,42 @@
+name: 06 - Deploy to Staging
+
+on:
+  workflow_run:
+    workflows: ["05 - Auto Promote to Staging"]
+    types:
+      - completed
+
+jobs:
+  deploy-staging:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout staging branch
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Deploy to Render (Staging)
+      - name: Deploy to Render Staging
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}"
+          echo "✅ Deployment triggered on Render (Staging)"
+
+      # Step 5: Summary
+      - name: Summary
+        run: |
+          echo "✅ Staging deployment triggered"
+          echo "🚀 Workflow 07 will now run automatically"

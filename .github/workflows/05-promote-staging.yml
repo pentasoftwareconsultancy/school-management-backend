@@ -1,0 +1,54 @@
+name: 05 - Auto Promote to Staging
+
+on:
+  workflow_run:
+    workflows: ["04 - Deploy to Testing"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  promote-to-staging:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout testing branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: testing
+          fetch-depth: 0
+
+      # Step 2: Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 3: Ensure staging branch exists
+      - name: Ensure staging branch exists
+        run: |
+          git fetch origin
+          if git ls-remote --exit-code --heads origin staging; then
+            git checkout staging
+            git pull origin staging
+          else
+            git checkout -b staging
+            git push -u origin staging
+          fi
+
+      # Step 4: Merge testing → staging
+      - name: Merge testing into staging
+        run: |
+          git checkout staging
+          git merge origin/testing --no-ff -m "Auto-promote: testing → staging [skip ci]"
+          git push origin staging
+
+      # Step 5: Summary
+      - name: Summary
+        run: |
+          echo "✅ Promoted: testing → staging"
+          echo "🚀 Workflow 06 will now run automatically"

@@ -1,0 +1,54 @@
+name: 03 - Auto Promote to Testing
+
+on:
+  workflow_run:
+    workflows: ["02 - Deploy to Development"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  promote-to-testing:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout development branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: development
+          fetch-depth: 0
+
+      # Step 2: Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 3: Ensure testing branch exists
+      - name: Ensure testing branch exists
+        run: |
+          git fetch origin
+          if git ls-remote --exit-code --heads origin testing; then
+            git checkout testing
+            git pull origin testing
+          else
+            git checkout -b testing
+            git push -u origin testing
+          fi
+
+      # Step 4: Merge development → testing
+      - name: Merge development into testing
+        run: |
+          git checkout testing
+          git merge origin/development --no-ff -m "Auto-promote: development → testing [skip ci]"
+          git push origin testing
+
+      # Step 5: Summary
+      - name: Summary
+        run: |
+          echo "✅ Promoted: development → testing"
+          echo "🚀 Workflow 04 will now run automatically"

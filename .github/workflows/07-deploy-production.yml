@@ -1,0 +1,60 @@
+name: 07 - Auto Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["06 - Deploy to Staging"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-production:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout staging branch
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      # Step 2: Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 3: Merge staging → main
+      - name: Merge staging into main
+        run: |
+          git fetch origin
+          git checkout main
+          git pull origin main
+          git merge origin/staging --no-ff -m "Auto-promote: staging → main (production) [skip ci]"
+          git push origin main
+
+      # Step 4: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 5: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 6: Deploy to Render (Production)
+      - name: Deploy to Render Production
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PROD }}"
+          echo "✅ Deployment triggered on Render (Production)"
+
+      # Step 7: Final summary
+      - name: Final summary
+        run: |
+          echo "🎉 Production deployment complete!"
+          echo "Pipeline: dev → testing → staging → production ✅"
