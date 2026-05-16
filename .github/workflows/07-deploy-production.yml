@@ -1,0 +1,45 @@
+name: 07 - Auto Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-production:
+    # Skip if this push was made by the bot (avoid re-triggering)
+    if: ${{ github.actor != 'github-actions[bot]' || contains(github.event.head_commit.message, 'Auto-promote') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout main branch
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: [TEST MODE] Mock Deploy to Render (Production)
+      - name: Deploy to Render Production (TEST MODE)
+        run: |
+          echo "🧪 TEST MODE: Skipping real Render deploy"
+          echo "✅ Mock deployment to Production — PASSED"
+
+      # Step 5: Final summary
+      - name: Final summary
+        run: |
+          echo "🎉 Production deployment complete!"
+          echo "Pipeline: dev → testing → staging → production ✅"

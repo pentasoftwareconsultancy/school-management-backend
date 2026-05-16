@@ -1,0 +1,53 @@
+name: 02 - Deploy to Development
+
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Type DEPLOY to deploy to development'
+        required: true
+        type: string
+
+jobs:
+  deploy-development:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Validate TL input
+      - name: Validate approval
+        run: |
+          if [ "${{ github.event.inputs.approval }}" != "DEPLOY" ]; then
+            echo "❌ Invalid input. Type exactly: DEPLOY"
+            exit 1
+          fi
+          echo "✅ Team Leader approved — starting deployment"
+
+      # Step 2: Checkout development branch
+      - name: Checkout development branch
+        uses: actions/checkout@v4
+        with:
+          ref: development
+          fetch-depth: 0
+
+      # Step 3: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 5: [TEST MODE] Mock Deploy to Render (Development)
+      - name: Deploy to Render Development (TEST MODE)
+        run: |
+          echo "🧪 TEST MODE: Skipping real Render deploy"
+          echo "✅ Mock deployment to Development — PASSED"
+          echo "⏳ In production, this would call: curl -X POST RENDER_DEPLOY_HOOK_DEV"
+
+      # Step 6: Summary
+      - name: Summary
+        run: |
+          echo "✅ Development deployment triggered"
+          echo "🚀 Workflow 03 will now run automatically"
