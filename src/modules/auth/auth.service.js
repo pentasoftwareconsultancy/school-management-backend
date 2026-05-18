@@ -26,8 +26,8 @@ const registerUser = async (userData) => {
   return newUser;
 };
 
-const loginUser = async (email, password) => {
-  // Find user
+const loginUser = async (email, password, role) => {
+  // Find user by email
   const user = await User.findOne({ where: { email } });
   if (!user) {
     throw new Error('Invalid credentials');
@@ -37,6 +37,12 @@ const loginUser = async (email, password) => {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new Error('Invalid credentials');
+  }
+
+  // If role is provided (student/teacher/parent), validate it matches DB
+  // Admin logs in without selecting a role — skip role check for admin
+  if (role && user.role !== 'admin' && user.role !== role.toLowerCase()) {
+    throw new Error(`Access denied. You are not registered as a ${role}.`);
   }
 
   // Generate Token
